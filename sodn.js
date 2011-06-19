@@ -17,7 +17,6 @@ function SODN (name) {
   this.id = uuid()
   this.name = name
   this.dnode = dnode(makeMethods(this))
-  //console.error(this.dnode)
 }
 
 // these are the methods that can be called directly
@@ -51,7 +50,7 @@ SODN.prototype.connect = function (host, port, cb) {
         self.once("meet", onmeet)
         return
       }
-      cb(friend)
+      cb && cb(friend)
     })
   })
 }
@@ -66,7 +65,6 @@ SODN.prototype.addFriend = function (friend, rem, con) {
   Object.keys(rem).forEach(function (m) {
     friend[m] = rem[m]
   })
-  // console.error(rem, con)
   this.emit("meet", friend)
 }
 
