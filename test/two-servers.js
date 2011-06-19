@@ -10,13 +10,13 @@ tap.plan(1)
 tap.test("basic connect/disconnect", function (t) {
 
   a.listen("localhost", 8081)
-  b.connect("localhost", 8081)
+  b.listen("localhost", 8082)
 
-  a.on("meet", function (brem) {
-    t.equal(b.id, brem.id, "ids should be equal")
-    t.equal(b.name, brem.name, "names should be equal")
-    t.equal(b.name, "b", "name should equal b")
-    //console.error(brem.connection.stream)
+  b.connect("localhost", 8081, function (arem) {
+    t.equal(a.id, arem.id, "ids should be equal")
+    t.equal(a.name, arem.name, "names should be equal")
+    t.equal(a.name, "a", "name should be a")
+    //console.error(arem.connection.stream)
     //console.error("about to close")
 
     // should be able to close the server and not accept any
@@ -27,12 +27,13 @@ tap.test("basic connect/disconnect", function (t) {
     // Likewise, .listen() should alert all friends of
     // IP and port number.
     a.close()
+    b.close()
 
     setTimeout(function () {
       // console.error("sending bye message")
-      brem.bye()
+      arem.bye()
       setTimeout(function () {
-        t.equal(brem.connection.stream.destroyed, true
+        t.equal(arem.connection.stream.destroyed, true
                ,"should be destroyed")
         t.end()
       }, 100)
