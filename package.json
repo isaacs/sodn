@@ -3,6 +3,10 @@
 , "description" : "Self-organizing dnode network"
 , "main" : "./sodn.js"
 , "scripts" : { "test" : "tap test/" }
-, "dependencies" : { "dnode" : "~0.7.2", "inherits" : "1.0" }
+, "dependencies" :
+  { "dnode" : "~0.7.2"
+  , "inherits" : "1.0"
+  , "node-uuid" : "~1.2.0"
+  }
 , "devDependencies" : { "tap" : "0" }
 }
