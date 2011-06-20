@@ -36,9 +36,25 @@ SODN.prototype.listen = function (host, port) {
       me.addFriend(friend, remote, connection)
     })
   })
+
+  me.broadcast("listening", host, port)
+}
+
+SODN.prototype.broadcast = function (msg) {
+  console.error("broadcast %s", msg)
+  var args = Array.prototype.slice.call(arguments, 1)
+    , me = this
+
+  Object.keys(this.network).forEach(function (f) {
+    console.error("broadcast: send "+msg+" to ",(me.network[f]))
+    if (!me.network[f]) return
+    me[msg].apply(me, [f].concat(args))
+  })
 }
 
 SODN.prototype.close = function () {
+  this.host = this.port = null
+  this.broadcast("closing")
   this.dnode.close()
 }
 
@@ -50,7 +66,7 @@ SODN.prototype.connect = function (host, port, cb) {
         self.once("meet", onmeet)
         return
       }
-      cb && cb(friend)
+      if (cb) cb(friend)
     })
   })
 }
@@ -91,13 +107,40 @@ function makeMethods (me) {
       cb(myInfo)
     }
 
-    function bye () {
+    function bye (cb) {
       if (f) me.network[f.id] = null
       connection.end()
+      if (cb) cb("bye")
+    }
+
+    function closing () {
+      console.error(f.name + " told "+me.name+" that they're closing")
+      if (!f) return
+      f.host = f.port = null
+    }
+
+    function listening (host, port) {
+      if (!f) return
+      f.host = host
+      f.port = port
     }
 
     return { hello: hello
+           , closing: closing
+           , listening: listening
            , bye: bye }
   }
 }
+
+Object.keys(makeMethods()()).forEach(function (m) {
+  SODN.prototype[m] = function (friend) {
+    if (friend.id) friend = friend.id
+    var rem = this.network[friend] && this.network[friend].remote
+    if (!rem) this.emit("error", new Error(
+      "Can't send message "+m
+      +"\nNo connection to "+friend))
+    var args = Array.prototype.slice(arguments, 1)
+    rem[m].apply(rem, args)
+  }
+})
 
