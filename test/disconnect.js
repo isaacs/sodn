@@ -6,9 +6,12 @@ var SODN = require("../")
   , b = SODN.create("b")
   , tap = require("tap")
 
-setTimeout(function () {
+// If the reconnection fails, then it'll never get to the point
+// where it closes the server, which means it'll just sit open
+// for a long time.
+var to = setTimeout(function () {
   throw new Error("Timeout")
-}, 1000)
+}, 2000)
 
 tap.plan(1)
 tap.test("basic connect/disconnect", function (t) {
@@ -19,15 +22,18 @@ tap.test("basic connect/disconnect", function (t) {
     // reconnect.
     a.once("meet", function (friend) {
       t.equal(friend.id, b.id, "friend should be b")
-      console.error("ending connection, expect a reconnect")
-      friend.connection.end()
-      a.once("meet", function (friend) {
-        t.equal(b.id, friend.id, "friend shoudl be b")
-        console.error("re-met")
-        friend.bye(function () {
-          t.end()
-        })
 
+      // random unexpected connection termination
+      friend.connection.end()
+
+      a.once("meet", function (friend) {
+        t.ok(true, "re-connected")
+        t.equal(b.id, friend.id, "friend should be b")
+
+        friend.bye()
+        a.close()
+        t.end()
+        clearTimeout(to)
       })
     })
   })
