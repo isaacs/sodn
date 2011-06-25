@@ -24,13 +24,16 @@ tap.test("basic connect/disconnect", function (t) {
       t.equal(friend.id, b.id, "friend should be b")
 
       // random unexpected connection termination
-      friend.connection.end()
+      var n = a.network[friend.id]
+      n.connection.end()
 
       a.once("meet", function (friend) {
+        var n = a.network[friend.id]
+
         t.ok(true, "re-connected")
         t.equal(b.id, friend.id, "friend should be b")
 
-        friend.bye()
+        n.bye()
         a.close()
         t.end()
         clearTimeout(to)

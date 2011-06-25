@@ -30,9 +30,10 @@ tap.test("basic connect/disconnect", function (t) {
 
     setTimeout(function () {
       // console.error("sending bye message")
-      brem.bye()
+      var bnet = a.network[brem.id]
+      bnet.bye()
       setTimeout(function () {
-        t.equal(brem.connection.stream.destroyed, true
+        t.equal(bnet.connection.stream.destroyed, true
                ,"should be destroyed")
         t.end()
       }, 100)

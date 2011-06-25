@@ -27,10 +27,10 @@ tap.test("basic connect/disconnect", function (t) {
     a.close()
 
     setTimeout(function () {
-      // console.error("sending bye message")
-      arem.bye()
+      var anet = b.network[arem.id]
+      anet.bye()
       setTimeout(function () {
-        t.equal(arem.connection.stream.destroyed, true
+        t.equal(anet.connection.stream.destroyed, true
                ,"should be destroyed")
         t.end()
       }, 100)
