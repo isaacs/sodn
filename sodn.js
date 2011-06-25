@@ -54,7 +54,6 @@ SODN.prototype.listen = function (host, port) {
     })
   })
 
-  debug("broadcasting update", this.record)
   me.broadcast("update", this.record)
 }
 
@@ -66,7 +65,6 @@ SODN.prototype.broadcast = function (msg) {
   debug("broadcast %s", msg, args, me.friends)
 
   me.friends.forEach(function (f) {
-    debug("  broadcast %s", msg, f, !!me.network[f])
     if (!me.network[f]) {
       debug("  not in network", f)
       needSync = true
@@ -79,30 +77,31 @@ SODN.prototype.broadcast = function (msg) {
     me.friends = Object.keys(me.network)
     me.sequence ++
     me.record.update(me)
-    debug("updating this.record in broadcast", me.record)
   }
 }
 
 SODN.prototype.close = function () {
+  if (!this.host || !this.port) return
   this.host = this.port = null
   this.sequence ++
   this.record.update(this)
-  debug("broadcasting update", this.record)
   this.broadcast("update", this.record)
   this.dnode.close()
 }
 
 SODN.prototype.connect = function (host, port, cb) {
-  var self = this
+  var me = this
   this.dnode.connect(host, port, function (remote) {
+    debug("back from connection", me.name, remote)
     // connection initiates the "hello" conversation,
     // which ends with emitting the "meet" event with the
     // new friend.  If we've been given a cb, then call
     // it when that dance is done.
-    if (cb) self.once("meet", function onmeet (friend) {
+    if (cb) me.once("meet", function onmeet (friend) {
       if (friend !== remote.friend) {
-        return self.once("meet", onmeet)
+        return me.once("meet", onmeet)
       }
+      debug("meeting", friend)
       cb(friend)
     })
   })
@@ -112,7 +111,7 @@ SODN.prototype.addFriend = function (friend, rem, con) {
   var id = friend.id
   friend = new Record(friend)
 
-  debug("addFriend", friend)
+  //debug("addFriend", friend)
   if (this.network[id]) {
     if (!this.network[id].connection.stream.destroyed) {
       this.network[id].bye()
@@ -123,20 +122,45 @@ SODN.prototype.addFriend = function (friend, rem, con) {
   this.society.remove(friend)
   this.society.add(friend)
 
-  // update my list of friends.
-  this.friends = Object.keys(this.network)
-  this.sequence ++
-  this.record.update(this)
-  debug("added friend", this.record)
-
   this.network[id] = rem
   rem.connection = con
   rem.friend = friend
 
+  // update my list of friends.
+  this.friends = Object.keys(this.network)
+  this.sequence ++
+  this.record.update(this)
+
   this.emit("meet", friend)
 }
 
+SODN.prototype.gossip = function (id, cb) {
+  if (typeof cb !== "function" && typeof id === "function") {
+    cb = id, id = null
+  }
+  cb = cb || function () {}
 
+  var me = this
+
+  if (!id) {
+    var n = me.friends.length
+    function cb_ () {
+      if (--n > 0) return
+      cb()
+    }
+    me.friends.forEach(function (f) {
+      me.gossip(f, cb_)
+    })
+    return
+  }
+
+  if (id && id.id) id = id.id
+
+  me.network[id].gossip(me.society._digest, function (conv) {
+    conv = me.society.update(conv)
+    me.network[id].societyUpdate(conv, cb)
+  })
+}
 
 
 
@@ -212,15 +236,28 @@ function makeMethods (me) {
       if (f) f = me.society.get(record)
     }
 
+    function gossip (digest, cb) {
+      debug("gossip", digest)
+      cb(me.society.gossip(digest))
+    }
+
+    function societyUpdate (conv, cb) {
+      debug("societyUpdate", conv)
+      cb(me.society.update(conv))
+    }
+
     return { hello: hello
            , update: update
            , hangup: hangup
-           , bye: bye }
+           , bye: bye
+           , gossip: gossip
+           , societyUpdate: societyUpdate
+           }
   }
 }
 
 Object.keys(makeMethods()()).forEach(function (m) {
-  SODN.prototype[m] = function (id) {
+  if (!SODN.prototype[m]) SODN.prototype[m] = function (id) {
     if (id.id) id = id.id
     var rem = this.network[id]
     if (!rem) this.emit("error", new Error(
