@@ -195,6 +195,16 @@ function makeMethods (me) {
       // either i'm not reachable, or i was the caller
       if (f.port && f.host) {
         debug("try to reconnect", f)
+        // If you get an error here, just accept it, and move on.
+        // It could well be that the server is just kaput.
+        me.dnode.once("error", function HANDLE (er) {
+          if (er.message.trim().match(/^ECONNREFUSED/)) {
+            debug("connection was refused", f)
+          } else {
+            // some other error.
+            me.dnode.once("error", HANDLE)
+          }
+        })
         me.connect(f.host, f.port)
       }
     })
