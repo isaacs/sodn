@@ -103,16 +103,16 @@ tap.test("digests", function (t) {
 
 tap.test("removing", function (t) {
   rsa.remove(ra)
-  t.equal(rsa.get(ra), null, "removed record should be gone")
-  t.equal(rsa._digest[ra.id], null, "removed record should be gone")
+  t.equal(rsa.get(ra), undefined, "removed record should be gone")
+  t.equal(rsa._digest[ra.id], undefined, "removed record should be gone")
 
   rsb.remove(db)
-  t.equal(rsb.get(db), null, "removed record should be gone")
-  t.equal(rsb._digest[db.id], null, "removed record should be gone")
+  t.equal(rsb.get(db), undefined, "removed record should be gone")
+  t.equal(rsb._digest[db.id], undefined, "removed record should be gone")
 
   rsa.remove("record-c")
-  t.equal(rsa.get(rc), null, "removed record should be gone")
-  t.equal(rsa._digest[rc.id], null, "removed record should be gone")
+  t.equal(rsa.get(rc), undefined, "removed record should be gone")
+  t.equal(rsa._digest[rc.id], undefined, "removed record should be gone")
 
   t.end()
 })
@@ -161,5 +161,45 @@ tap.test("gossipping", function (t) {
 
   t.similar(rsa._data, rsb._data, "should have synced data")
   t.similar(rsa._digest, rsb._digest, "should have synced digest")
+  t.end()
+})
+
+tap.test("walking", function (t) {
+  var a = { id: "a", sequence: 1, friends: [ "b", "f" ] }
+    , b = { id: "b", sequence: 1, friends: [ "c", "a" ] }
+    , c = { id: "c", sequence: 1, friends: [ "d", "b" ] }
+    , d = { id: "d", sequence: 1, friends: [ "e", "c" ] }
+    , e = { id: "e", sequence: 1, friends: [ "f", "d" ] }
+    , f = { id: "f", sequence: 1, friends: [ "a", "e" ] }
+    , rs = new RecordSet()
+
+  rs.add(a)
+  rs.add(b)
+  rs.add(c)
+  rs.add(d)
+  rs.add(e)
+  rs.add(f)
+
+  var order = [ "a", "b", "f", "c", "e", "d" ]
+  results = rs.bfWalk(a, function (n) {
+    t.equal(n.id, order.shift(), "bfs order: "+n.id)
+    return n.id
+  })
+  t.equal(order.length, 0, "all nodes visited")
+
+  var expect = { a: "a", b: "b", f: "f", c: "c", e: "e", d: "d" }
+  t.similar(expect, results, "results")
+
+
+  var order = [ "a", "b", "c", "d", "e", "f" ]
+  results = rs.dfWalk(a, function (n) {
+    t.equal(n.id, order.shift(), "dfs order: "+n.id)
+    return n.id
+  })
+  t.equal(order.length, 0, "all nodes visited")
+
+  var expect = { a: "a", b: "b", f: "f", c: "c", e: "e", d: "d" }
+  t.similar(expect, results, "results")
+
   t.end()
 })
