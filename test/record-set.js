@@ -181,25 +181,36 @@ tap.test("walking", function (t) {
   rs.add(f)
 
   var order = [ "a", "b", "f", "c", "e", "d" ]
-  results = rs.bfWalk(a, function (n) {
+  results = rs.bfWalk(a, function (n, path) {
     t.equal(n.id, order.shift(), "bfs order: "+n.id)
-    return n.id
+    return path
   })
   t.equal(order.length, 0, "all nodes visited")
 
-  var expect = { a: "a", b: "b", f: "f", c: "c", e: "e", d: "d" }
-  t.similar(expect, results, "results")
+  // shortest path from 'a'
+  var expect = { a: []
+               , b: [ "a" ]
+               , f: [ "a" ]
+               , c: [ "a", "b" ]
+               , e: [ "a", "f" ]
+               , d: [ "a", "b", "c" ] }
+  t.similar(results, expect, "results")
 
 
   var order = [ "a", "b", "c", "d", "e", "f" ]
-  results = rs.dfWalk(a, function (n) {
+  results = rs.dfWalk(a, function (n, path) {
     t.equal(n.id, order.shift(), "dfs order: "+n.id)
-    return n.id
+    return path
   })
   t.equal(order.length, 0, "all nodes visited")
 
-  var expect = { a: "a", b: "b", f: "f", c: "c", e: "e", d: "d" }
-  t.similar(expect, results, "results")
+  var expect = { a: []
+               , b: [ "a" ]
+               , c: [ "a", "b" ]
+               , d: [ "a", "b", "c" ]
+               , e: [ "a", "b", "c", "d" ]
+               , f: [ "a", "b", "c", "d", "e" ] }
+  t.similar(results, expect, "results")
 
   t.end()
 })
