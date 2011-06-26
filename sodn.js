@@ -114,6 +114,8 @@ SODN.prototype.addFriend = function (friend, rem, con) {
   //debug("addFriend", friend)
   if (this.network[id]) {
     if (!this.network[id].connection.stream.destroyed) {
+      // Shut down that connection before adding this one.
+      // Good chance it's bogus anyhow.
       this.network[id].bye()
     }
   }
@@ -182,7 +184,10 @@ function makeMethods (me) {
       if (!f || !me.network[f.id] || connection.disconnecting) return
 
       // remove from the list of connections
-      me.network[f.id] = null
+      delete me.network[f.id]
+      me.friends = Object.keys(me.network)
+      me.sequence ++
+      me.record.update(me)
 
       // if we both are reachable, then let the original caller do it.
       if (me.host && me.port && f.host && f.port && remote.caller) return
@@ -206,7 +211,12 @@ function makeMethods (me) {
     }
 
     function bye () {
-      if (f) me.network[f.id] = null
+      if (f) {
+        delete me.network[f.id]
+        me.friends = Object.keys(me.network)
+        me.sequence ++
+        me.record.update(me)
+      }
       connection.disconnecting = true
       // no, YOU hang up first!
       remote.hangup()
@@ -217,10 +227,12 @@ function makeMethods (me) {
       debug("hangup", me.id, me.name)
       // flush any pending messages, and then disconnect
       connection.disconnecting = true
-      if (f) me.network[f.id] = null
-      me.friends = Object.keys(me.network)
-      me.sequence ++
-      me.record.update(me)
+      if (f) {
+        delete me.network[f.id]
+        me.friends = Object.keys(me.network)
+        me.sequence ++
+        me.record.update(me)
+      }
 
       if (!connection.stream.flush()) {
         connection.stream.on("drain", connection.end.bind(connection))
